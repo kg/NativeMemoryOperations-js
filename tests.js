@@ -123,6 +123,28 @@ module({
                 NativeMemoryOperations.memcpy(a2, 0, a, 0, 16);
             });
         });
+
+        test("source offset is in elements", function () {
+            var a = new Uint32Array([1, 2, 3, 4]);
+            var a2 = new Uint32Array(2);
+
+            var expected = new Uint32Array([2, 3])
+
+            NativeMemoryOperations.memcpy(a2, 0, a, 1, 2 * Uint32Array.BYTES_PER_ELEMENT);
+
+            assertEqualArrays(expected, a2);
+        });
+
+        test("destination offset is in elements", function () {
+            var a = new Uint32Array([1, 2, 3, 4]);
+            var a2 = new Uint32Array(4);
+
+            var expected = new Uint32Array([0, 1, 2, 0])
+
+            NativeMemoryOperations.memcpy(a2, 1, a, 0, 2 * Uint32Array.BYTES_PER_ELEMENT);
+
+            assertEqualArrays(expected, a2);
+        });
     });
 
     fixture("moveRange", function () {
@@ -179,6 +201,16 @@ module({
             assert.throws(Error, function () {
                 NativeMemoryOperations.memset(a, 0, 0, 32);
             });
+        });
+
+        test("destination offset is in elements", function () {
+            var a = new Uint32Array(4);
+
+            var expected = new Uint32Array([0, 16843009, 16843009, 16843009]);
+
+            NativeMemoryOperations.memset(a, 1, 1, 3 * Uint32Array.BYTES_PER_ELEMENT);
+
+            assertEqualArrays(expected, a);
         });
     });
 

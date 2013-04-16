@@ -1,12 +1,13 @@
 /*
-    Native memory operations JS polyfill v0
+    Native memory operations JS polyfill v1
     by Kevin Gadd (@antumbral, kevin.gadd@gmail.com)
 
     https://github.com/kevingadd/NativeMemoryOperations-js
     Released under the MIT open source license.
 
     To use, call NativeMemoryOperations.installPolyfills() to make the polyfills available.
-    You may then use NativeMemoryOperations.memcpy and NativeMemoryOperations.memset for convenience.
+    You may then use NativeMemoryOperations.memcpy and NativeMemoryOperations.memset for convenience,
+        or use the new TypedArray moveRange and fillRange methods.
 */
 
 if (typeof (NativeMemoryOperations) === "undefined") {
@@ -62,17 +63,17 @@ if (typeof (NativeMemoryOperations) === "undefined") {
     /*
         Attempts to perfectly match C memcpy semantics.
         NativeMemoryOperations.memcpy(ARR1, ptr1, ARR2, ptr2, count) is equivalent to memcpy(&ARR1[ptr1], &ARR2[ptr2], count).
-        destTypedArray and sourceTypedArray are treated as byte pointers (their respective type(s) are ignored).
-        destOffsetInBytes and sourceOffsetInBytes are relative to the beginning of the specified typed arrays (not their buffers).
+        destTypedArray and sourceTypedArray are treated as pointers (their respective type(s) are ignored).
+        destOffsetInElements and sourceOffsetInElements are relative to the beginning of the specified typed arrays (not their buffers).
         Polyfills must be installed.
     */
     NativeMemoryOperations.memcpy = function memcpy (
-        destTypedArray, destOffsetInBytes, 
-        sourceTypedArray, sourceOffsetInBytes, countInBytes
+        destTypedArray, destOffsetInElements, 
+        sourceTypedArray, sourceOffsetInElements, countInBytes
     ) {
         countInBytes = countInBytes | 0;
-        destOffsetInBytes = (destOffsetInBytes + destTypedArray.byteOffset) | 0;
-        sourceOffsetInBytes = (sourceOffsetInBytes + sourceTypedArray.byteOffset) | 0;
+        var destOffsetInBytes = ((destOffsetInElements * destTypedArray.BYTES_PER_ELEMENT) + destTypedArray.byteOffset) | 0;
+        var sourceOffsetInBytes = ((sourceOffsetInElements * sourceTypedArray.BYTES_PER_ELEMENT) + sourceTypedArray.byteOffset) | 0;
 
         var sourceEndOffsetInBytes = (sourceOffsetInBytes + countInBytes) | 0;
 
@@ -111,18 +112,18 @@ if (typeof (NativeMemoryOperations) === "undefined") {
     /*
         Attempts to perfectly match C memset semantics.
         NativeMemoryOperations.memset(ARR, ptr, value, count) is equivalent to memset(&ARR[ptr], value, count).
-        destTypedArray is treated as a byte pointer (its element type is ignored).
-        destOffsetInBytes is relative to the beginning of the specified typed array (not its buffer).
+        destTypedArray is treated as a pointer (its element type is ignored).
+        destOffsetInElements is relative to the beginning of the specified typed array (not its buffer).
         valueByte is masked into the range of a uint8 (unsigned char).
         Polyfills must be installed.
     */
     NativeMemoryOperations.memset = function memset (
-        destTypedArray, destOffsetInBytes, 
+        destTypedArray, destOffsetInElements, 
         valueByte, countInBytes
     ) {
         var destArray = NativeMemoryOperations.getByteArrayForTypedArray(destTypedArray);
 
-        destOffsetInBytes = (destOffsetInBytes + destTypedArray.byteOffset) | 0;
+        var destOffsetInBytes = ((destOffsetInElements * destTypedArray.BYTES_PER_ELEMENT) + destTypedArray.byteOffset) | 0;
         countInBytes = countInBytes | 0;
         valueByte = valueByte & 0xFF;
 
