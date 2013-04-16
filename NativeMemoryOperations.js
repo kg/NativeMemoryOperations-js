@@ -132,97 +132,103 @@ if (typeof (NativeMemoryOperations) === "undefined") {
             destOffsetInBytes, endOffsetInBytes, valueByte
         );
     };
-    
-    /* 
-        TypedArray.prototype.moveRange polyfill. 
-        |this| must be a Typed Array of the same type as |sourceTypedArray|.
-        Copies elements [sourceStartOffsetInElements, sourceEndOffsetInElements) to |this| starting at destOffsetInElements.
-        sourceEndOffsetInElements must >= sourceStartOffsetInElements.
+
+    /*
+        Installs moveRange and setRange into the prototype of the given typed array.
+        If native versions of the methods already exist, they will not be overwritten.
+        It's important to generate separate copies of the polyfills for each typed array type,
+            because otherwise the inline caches will have polluted type information.
     */
-    NativeMemoryOperations.moveRange = function moveRange (
-        destOffsetInElements, 
-        sourceTypedArray, sourceStartOffsetInElements, sourceEndOffsetInElements
-    ) {
-        // This sucks. Wish it was (startOffset, count).
-        var destEndOffsetInElements = (destOffsetInElements + (sourceEndOffsetInElements - sourceStartOffsetInElements)) | 0;
+    NativeMemoryOperations.installPolyfillsIntoPrototype = function (prototype) {    
 
-        if (Object.getPrototypeOf(this) !== Object.getPrototypeOf(sourceTypedArray))
-            throw new Error("Source and destination typed arrays must be of the same type.");
-        else if (sourceEndOffsetInElements < sourceStartOffsetInElements)
-            throw new Error("End offset must be greater than or equal to start offset.");
-        else if (sourceEndOffsetInElements > sourceTypedArray.length)
-            throw new Error("Source end offset must be less than or equal to length of source array.");
-        else if (sourceStartOffsetInElements < 0)
-            throw new Error("Source start offset must not be negative.");
-        else if (destOffsetInElements < 0)
-            throw new Error("Destination offset must not be negative.");
-        else if (destEndOffsetInElements > this.length)
-            throw new Error("Destination end offset must be less than or equal to length of destination array.");
+        /* 
+            TypedArray.prototype.moveRange polyfill. 
+            |this| must be a Typed Array of the same type as |sourceTypedArray|.
+            Copies elements [sourceStartOffsetInElements, sourceEndOffsetInElements) to |this| starting at destOffsetInElements.
+            sourceEndOffsetInElements must >= sourceStartOffsetInElements.
+        */
+        if (typeof (prototype.moveRange) !== "function")
+        prototype.moveRange = function moveRange (
+            destOffsetInElements, 
+            sourceTypedArray, sourceStartOffsetInElements, sourceEndOffsetInElements
+        ) {
+            // This sucks. Wish it was (startOffset, count).
+            var destEndOffsetInElements = (destOffsetInElements + (sourceEndOffsetInElements - sourceStartOffsetInElements)) | 0;
 
-        var copyForwards = true;
+            if (Object.getPrototypeOf(this) !== Object.getPrototypeOf(sourceTypedArray))
+                throw new Error("Source and destination typed arrays must be of the same type.");
+            else if (sourceEndOffsetInElements < sourceStartOffsetInElements)
+                throw new Error("End offset must be greater than or equal to start offset.");
+            else if (sourceEndOffsetInElements > sourceTypedArray.length)
+                throw new Error("Source end offset must be less than or equal to length of source array.");
+            else if (sourceStartOffsetInElements < 0)
+                throw new Error("Source start offset must not be negative.");
+            else if (destOffsetInElements < 0)
+                throw new Error("Destination offset must not be negative.");
+            else if (destEndOffsetInElements > this.length)
+                throw new Error("Destination end offset must be less than or equal to length of destination array.");
 
-        if (this === sourceTypedArray) {
-            if (destOffsetInElements === sourceStartOffsetInElements)
+            var copyForwards = true;
+
+            if (this === sourceTypedArray) {
+                if (destOffsetInElements === sourceStartOffsetInElements)
+                    return;
+                else
+                    copyForwards = (sourceStartOffsetInElements > destOffsetInElements);
+            }
+
+            if (copyForwards) {
+                for (var sourceOffset = sourceStartOffsetInElements, destOffset = destOffsetInElements; 
+                    sourceOffset < sourceEndOffsetInElements;
+                    sourceOffset = (sourceOffset + 1) | 0, destOffset = (destOffset + 1) | 0) {
+
+                    this[destOffset] = sourceTypedArray[sourceOffset];
+                }
+            } else {
+
+                for (var sourceOffset = sourceEndOffsetInElements - 1, destOffset = destEndOffsetInElements - 1; 
+                    sourceOffset >= sourceStartOffsetInElements;
+                    sourceOffset = (sourceOffset - 1) | 0, destOffset = (destOffset - 1) | 0) {
+
+                    this[destOffset] = sourceTypedArray[sourceOffset];
+                }
+            }
+        }
+        
+        /* 
+            TypedArray.prototype.fillRange polyfill. |this| must be a Typed Array.
+            Copies |value| to elements [startOffsetInElements, endOffsetInElements) of |this|.
+        */
+        if (typeof (prototype.fillRange) !== "function")
+        prototype.fillRange = function fillRange (
+            startOffsetInElements, endOffsetInElements,
+            value
+        ) {
+            if (endOffsetInElements < startOffsetInElements)
+                throw new Error("End offset must be greater than or equal to start offset.");
+            else if (endOffsetInElements > this.length)
+                throw new Error("End offset must be less than or equal to length of array.");
+            else if (startOffsetInElements < 0)
+                throw new Error("Start offset must not be negative.");
+            else if (endOffsetInElements === startOffsetInElements)
                 return;
-            else
-                copyForwards = (sourceStartOffsetInElements > destOffsetInElements);
-        }
 
-        if (copyForwards) {
-            for (var sourceOffset = sourceStartOffsetInElements, destOffset = destOffsetInElements; 
-                sourceOffset < sourceEndOffsetInElements;
-                sourceOffset = (sourceOffset + 1) | 0, destOffset = (destOffset + 1) | 0) {
+            var typedValue = (this[startOffsetInElements] = value);
 
-                this[destOffset] = sourceTypedArray[sourceOffset];
-            }
-        } else {
+            for (var offset = (startOffsetInElements + 1) | 0;
+                 offset < endOffsetInElements;
+                 offset = (offset + 1) | 0) {
 
-            for (var sourceOffset = sourceEndOffsetInElements - 1, destOffset = destEndOffsetInElements - 1; 
-                sourceOffset >= sourceStartOffsetInElements;
-                sourceOffset = (sourceOffset - 1) | 0, destOffset = (destOffset - 1) | 0) {
-
-                this[destOffset] = sourceTypedArray[sourceOffset];
+                this[offset] = typedValue;
             }
         }
-    }
-    
-    /* 
-        TypedArray.prototype.fillRange polyfill. |this| must be a Typed Array.
-        Copies |value| to elements [startOffsetInElements, endOffsetInElements) of |this|.
-    */
-    NativeMemoryOperations.fillRange = function fillRange (
-        startOffsetInElements, endOffsetInElements,
-        value
-    ) {
-        if (endOffsetInElements < startOffsetInElements)
-            throw new Error("End offset must be greater than or equal to start offset.");
-        else if (endOffsetInElements > this.length)
-            throw new Error("End offset must be less than or equal to length of array.");
-        else if (startOffsetInElements < 0)
-            throw new Error("Start offset must not be negative.");
-        else if (endOffsetInElements === startOffsetInElements)
-            return;
-
-        var typedValue = (this[startOffsetInElements] = value);
-
-        for (var offset = (startOffsetInElements + 1) | 0;
-             offset < endOffsetInElements;
-             offset = (offset + 1) | 0) {
-
-            this[offset] = typedValue;
-        }
-    }
+    };
     
     /*
         Installs TypedArray.prototype.moveRange and TypedArray.prototype.fillRange
         polyfills if not implemented natively.
     */
     NativeMemoryOperations.installPolyfills = function () {
-        var testTypedArray = new Uint8Array();
-        
-        var installMoveRange = typeof (testTypedArray.moveRange) !== "function";
-        var installFillRange = typeof (testTypedArray.fillRange) !== "function";
-        
         // FIXME: Add Uint64Array and Int64Array once those types are introduced.
         var typedArrayTypes = [
             Uint8Array, Uint16Array, Uint32Array,
@@ -236,10 +242,7 @@ if (typeof (NativeMemoryOperations) === "undefined") {
                 continue;
             
             var typedArrayProto = typedArrayType.prototype;
-            if (installMoveRange && (typeof (typedArrayProto.moveRange) !== "function"))
-                typedArrayProto.moveRange = NativeMemoryOperations.moveRange;
-            if (installFillRange && (typeof (typedArrayProto.fillRange) !== "function"))
-                typedArrayProto.fillRange = NativeMemoryOperations.fillRange;
+            NativeMemoryOperations.installPolyfillsIntoPrototype(typedArrayProto);
         }
     };
 
