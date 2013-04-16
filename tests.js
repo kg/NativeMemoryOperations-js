@@ -182,14 +182,14 @@ module({
         });
     });
 
-    fixture("setRange", function () {
+    fixture("fillRange", function () {
         test("sets values", function () {
             var a = new Float32Array(8);
 
             var f = 0.1;
             var expected = new Float32Array([0, f, f, f, f, f, f, 0]);
 
-            a.setRange(1, 7, f);
+            a.fillRange(1, 7, f);
 
             assertEqualArrays(expected, a);
         });

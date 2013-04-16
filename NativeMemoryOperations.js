@@ -86,7 +86,7 @@ if (typeof (NativeMemoryOperations) === "undefined") {
 
         var endOffsetInBytes = (destOffsetInBytes + countInBytes) | 0;
 
-        destArray.setRange(
+        destArray.fillRange(
             destOffsetInBytes, endOffsetInBytes, valueByte
         );
     };
@@ -145,10 +145,10 @@ if (typeof (NativeMemoryOperations) === "undefined") {
     }
     
     /* 
-        TypedArray.prototype.setRange polyfill. |this| must be a Typed Array.
+        TypedArray.prototype.fillRange polyfill. |this| must be a Typed Array.
         Copies |value| to elements [startOffsetInElements, endOffsetInElements) of |this|.
     */
-    NativeMemoryOperations.setRange = function setRange (
+    NativeMemoryOperations.fillRange = function fillRange (
         startOffsetInElements, endOffsetInElements,
         value
     ) {
@@ -172,14 +172,14 @@ if (typeof (NativeMemoryOperations) === "undefined") {
     }
     
     /*
-        Installs TypedArray.prototype.moveRange and TypedArray.prototype.setRange
+        Installs TypedArray.prototype.moveRange and TypedArray.prototype.fillRange
         polyfills if not implemented natively.
     */
     NativeMemoryOperations.installPolyfills = function () {
         var testTypedArray = new Uint8Array();
         
         var installMoveRange = typeof (testTypedArray.moveRange) !== "function";
-        var installSetRange = typeof (testTypedArray.setRange) !== "function";
+        var installFillRange = typeof (testTypedArray.fillRange) !== "function";
         
         // FIXME: Add Uint64Array and Int64Array once those types are introduced.
         var typedArrayTypes = [
@@ -196,8 +196,8 @@ if (typeof (NativeMemoryOperations) === "undefined") {
             var typedArrayProto = typedArrayType.prototype;
             if (installMoveRange && (typeof (typedArrayProto.moveRange) !== "function"))
                 typedArrayProto.moveRange = NativeMemoryOperations.moveRange;
-            if (installSetRange && (typeof (typedArrayProto.setRange) !== "function"))
-                typedArrayProto.setRange = NativeMemoryOperations.setRange;
+            if (installFillRange && (typeof (typedArrayProto.fillRange) !== "function"))
+                typedArrayProto.fillRange = NativeMemoryOperations.fillRange;
         }
     };
 
