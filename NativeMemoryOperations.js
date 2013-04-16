@@ -17,6 +17,7 @@ if (typeof (NativeMemoryOperations) === "undefined") {
         throw new Error("WeakMaps are required");
 
     NativeMemoryOperations.byteArrayCache = new WeakMap();
+    NativeMemoryOperations.uint32ArrayCache = new WeakMap();
 
     /*
         For the given typed array, returns a Uint8Array pointing at its underlying buffer.
@@ -34,8 +35,26 @@ if (typeof (NativeMemoryOperations) === "undefined") {
         if (!result)
             NativeMemoryOperations.byteArrayCache.set(buffer, result = new Uint8Array(buffer, 0, buffer.byteLength));
 
-        if (result.buffer !== buffer)
-            throw new Error("what");
+        return result;
+    };
+
+    /*
+        For the given typed array, returns a Uint32Array pointing at its underlying buffer.
+        The returned Uint32Array always has an offset of 0 and a length equal to the length of the buffer.
+        The array will be cached where possible to reduce GC pressure.
+    */
+    NativeMemoryOperations.getUint32ArrayForTypedArray = function getUint32ArrayForTypedArray (
+        typedArray
+    ) {
+        var buffer = typedArray.buffer;
+        if (!buffer)
+            throw new Error("typedArray must be a typed array");
+        else if ((buffer.byteLength >> 2) << 2 !== buffer.byteLength)
+            throw new Error("typedArray's underlying buffer must have a length that is a multiple of 4");
+
+        var result = NativeMemoryOperations.uint32ArrayCache.get(buffer);
+        if (!result)
+            NativeMemoryOperations.uint32ArrayCache.set(buffer, result = new Uint32Array(buffer, 0, buffer.byteLength >> 2));
 
         return result;
     };
@@ -51,19 +70,42 @@ if (typeof (NativeMemoryOperations) === "undefined") {
         destTypedArray, destOffsetInBytes, 
         sourceTypedArray, sourceOffsetInBytes, countInBytes
     ) {
-        var destArray = NativeMemoryOperations.getByteArrayForTypedArray(destTypedArray);
-        var sourceArray = NativeMemoryOperations.getByteArrayForTypedArray(sourceTypedArray);
-
+        countInBytes = countInBytes | 0;
         destOffsetInBytes = (destOffsetInBytes + destTypedArray.byteOffset) | 0;
         sourceOffsetInBytes = (sourceOffsetInBytes + sourceTypedArray.byteOffset) | 0;
-        countInBytes = countInBytes | 0;
 
-        var endOffsetInBytes = (sourceOffsetInBytes + countInBytes) | 0;
+        var sourceEndOffsetInBytes = (sourceOffsetInBytes + countInBytes) | 0;
 
-        destArray.moveRange(
-            destOffsetInBytes, 
-            sourceArray, sourceOffsetInBytes, endOffsetInBytes
-        );
+        var destOffsetInElements = destOffsetInBytes >> 2;
+        var sourceOffsetInElements = sourceOffsetInBytes >> 2;
+        var sourceEndOffsetInElements = sourceEndOffsetInBytes >> 2;
+
+        if (
+            // The offsets must be multiples of 4.
+            (destOffsetInElements << 2 == destOffsetInBytes) &&
+            (sourceOffsetInElements << 2 == sourceOffsetInBytes) &&
+            (sourceEndOffsetInElements << 2 == sourceEndOffsetInBytes) &&
+            // The typed arrays' size must be a multiple of 4.
+            ((destTypedArray.buffer.byteLength >> 2) << 2 === destTypedArray.buffer.byteLength) &&
+            ((sourceTypedArray.buffer.byteLength >> 2) << 2 === sourceTypedArray.buffer.byteLength)
+        ) {
+            // Do a fast copy in 4-byte units.
+            var destArray = NativeMemoryOperations.getUint32ArrayForTypedArray(destTypedArray);
+            var sourceArray = NativeMemoryOperations.getUint32ArrayForTypedArray(sourceTypedArray);
+
+            destArray.moveRange(
+                destOffsetInElements, 
+                sourceArray, sourceOffsetInElements, sourceEndOffsetInElements
+            );
+        } else {
+            var destArray = NativeMemoryOperations.getByteArrayForTypedArray(destTypedArray);
+            var sourceArray = NativeMemoryOperations.getByteArrayForTypedArray(sourceTypedArray);
+
+            destArray.moveRange(
+                destOffsetInBytes, 
+                sourceArray, sourceOffsetInBytes, sourceEndOffsetInBytes
+            );
+        }
     };
 
     /*
