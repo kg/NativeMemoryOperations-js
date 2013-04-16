@@ -77,4 +77,24 @@ module({
 
         assertEqualArrays(expected, a);
     });
+
+    test("throws if arrays are not same type", function () {
+        var a1 = new Uint8Array(8);
+        var a2 = new Uint16Array(4);
+
+        assert.throws(Error, function () {
+            a2.moveRange(0, a1, 0, 4);
+        });
+    });
+
+    test("unaligned copies work", function () {
+        var a1 = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        var a2 = new Uint8Array(11);
+
+        var expected = new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2]);
+
+        NativeMemoryOperations.memcpy(a2, 9, a1, 1, 3);
+
+        assertEqualArrays(expected, a2);
+    });
 });
