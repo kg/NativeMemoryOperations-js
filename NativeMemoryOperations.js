@@ -12,31 +12,73 @@
 if (typeof (NativeMemoryOperations) === "undefined") {
     NativeMemoryOperations = Object.create(null);
 
+    NativeMemoryOperations.byteArrayCache = new WeakMap();
+
     /*
-        Attempts to match C memcpy semantics, but operates element-wise.
+        For the given typed array, returns a Uint8Array pointing at its underlying buffer.
+        The returned Uint8Array always has an offset of 0 and a length equal to the length of the buffer.
+        The array will be cached where possible to reduce GC pressure.
+    */
+    NativeMemoryOperations.getByteArrayForTypedArray = function getByteArrayForTypedArray (
+        typedArray
+    ) {
+        var buffer = typedArray.buffer;
+        if (!buffer)
+            throw new Error("typedArray must be a typed array");
+
+        var result = NativeMemoryOperations.byteArrayCache.get(buffer);
+        if (!result)
+            NativeMemoryOperations.byteArrayCache.set(buffer, result = new Uint8Array(buffer, 0, buffer.byteLength));
+
+        return result;
+    };
+
+    /*
+        Attempts to perfectly match C memcpy semantics.
+        NativeMemoryOperations.memcpy(ARR1, ptr1, ARR2, ptr2, count) is equivalent to memcpy(&ARR1[ptr1], &ARR2[ptr2], count).
+        destTypedArray and sourceTypedArray are treated as byte pointers (their respective type(s) are ignored).
+        destOffsetInBytes and sourceOffsetInBytes are relative to the beginning of the specified typed arrays (not their buffers).
         Polyfills must be installed.
     */
     NativeMemoryOperations.memcpy = function memcpy (
-        destTypedArray, destOffsetInElements, 
-        sourceTypedArray, sourceOffsetInElements, countInElements
+        destTypedArray, destOffsetInBytes, 
+        sourceTypedArray, sourceOffsetInBytes, countInBytes
     ) {
-        destTypedArray.moveRange(
-            destOffsetInElements | 0,
-            sourceTypedArray, sourceOffsetInElements | 0, (sourceOffsetInElements + countInElements) | 0
+        var destArray = NativeMemoryOperations.getByteArrayForTypedArray(destTypedArray);
+        var sourceArray = NativeMemoryOperations.getByteArrayForTypedArray(sourceTypedArray);
+
+        destOffsetInBytes = (destOffsetInBytes + destTypedArray.byteOffset) | 0;
+        sourceOffsetInBytes = (sourceOffsetInBytes + sourceTypedArray.byteOffset) | 0;
+        countInBytes = countInBytes | 0;
+
+        destArray.moveRange(
+            destOffsetInBytes, 
+            sourceArray, sourceOffsetInBytes, countInBytes
         );
     };
 
     /*
-        Attempts to match C memset semantics, but operates element-wise.
+        Attempts to perfectly match C memset semantics.
+        NativeMemoryOperations.memset(ARR, ptr, value, count) is equivalent to memset(&ARR[ptr], value, count).
+        destTypedArray is treated as a byte pointer (its element type is ignored).
+        destOffsetInBytes is relative to the beginning of the specified typed array (not its buffer).
+        valueByte is masked into the range of a uint8 (unsigned char).
         Polyfills must be installed.
     */
     NativeMemoryOperations.memset = function memset (
-        destTypedArray, destOffsetInElements, 
-        countInElements, value
+        destTypedArray, destOffsetInBytes, 
+        valueByte, countInBytes
     ) {
-        destTypedArray.setRange(
-            destOffsetInElements | 0,
-            countInElements | 0, value
+        var destArray = NativeMemoryOperations.getByteArrayForTypedArray(destTypedArray);
+
+        destOffsetInBytes = (destOffsetInBytes + destTypedArray.byteOffset) | 0;
+        countInBytes = countInBytes | 0;
+        valueByte = valueByte & 0xFF;
+
+        var endOffsetInBytes = (destOffsetInBytes + countInBytes) | 0;
+
+        destArray.setRange(
+            destOffsetInBytes, endOffsetInBytes, valueByte
         );
     };
     
