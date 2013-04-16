@@ -101,10 +101,21 @@ if (typeof (NativeMemoryOperations) === "undefined") {
         destOffsetInElements, 
         sourceTypedArray, sourceStartOffsetInElements, sourceEndOffsetInElements
     ) {
+        // This sucks. Wish it was (startOffset, count).
+        var destEndOffsetInElements = (destOffsetInElements + (sourceEndOffsetInElements - sourceStartOffsetInElements)) | 0;
+
         if (Object.getPrototypeOf(this) !== Object.getPrototypeOf(sourceTypedArray))
             throw new Error("Source and destination typed arrays must be of the same type.");
-        if (sourceEndOffsetInElements < sourceStartOffsetInElements)
+        else if (sourceEndOffsetInElements < sourceStartOffsetInElements)
             throw new Error("End offset must be greater than or equal to start offset.");
+        else if (sourceEndOffsetInElements > sourceTypedArray.length)
+            throw new Error("Source end offset must be less than or equal to length of source array.");
+        else if (sourceStartOffsetInElements < 0)
+            throw new Error("Source start offset must not be negative.");
+        else if (destOffsetInElements < 0)
+            throw new Error("Destination offset must not be negative.");
+        else if (destEndOffsetInElements > this.length)
+            throw new Error("Destination end offset must be less than or equal to length of destination array.");
 
         var copyForwards = true;
 
@@ -123,8 +134,6 @@ if (typeof (NativeMemoryOperations) === "undefined") {
                 this[destOffset] = sourceTypedArray[sourceOffset];
             }
         } else {
-            // This sucks. Wish it was (startOffset, count).
-            var destEndOffsetInElements = (destOffsetInElements + (sourceEndOffsetInElements - sourceStartOffsetInElements)) | 0;
 
             for (var sourceOffset = sourceEndOffsetInElements - 1, destOffset = destEndOffsetInElements - 1; 
                 sourceOffset >= sourceStartOffsetInElements;

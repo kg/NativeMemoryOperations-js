@@ -80,15 +80,49 @@ module({
         });
 
         test("unaligned copies work", function () {
-            var a1 = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-            var a2 = new Uint8Array(11);
+            var a1 = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+            var a2 = new Uint8Array(13);
 
-            var expected = new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2]);
+            var expected = new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 0]);
 
             NativeMemoryOperations.memcpy(a2, 9, a1, 1, 3);
 
             assertEqualArrays(expected, a2);
         })
+
+        test("throws if source start offset is negative", function () {
+            var a = new Uint8Array(8);
+
+            assert.throws(Error, function () {
+                NativeMemoryOperations.memcpy(a, 0, a, -32, 8);
+            });
+        });
+
+        test("throws if destination start offset is negative", function () {
+            var a = new Uint8Array(8);
+
+            assert.throws(Error, function () {
+                NativeMemoryOperations.memcpy(a, -32, a, 0, 8);
+            });
+        });
+
+        test("throws if count exceeds length of source", function () {
+            var a = new Uint8Array(8);
+            var a2 = new Uint8Array(16);
+
+            assert.throws(Error, function () {
+                NativeMemoryOperations.memcpy(a2, 0, a, 0, 16);
+            });
+        });
+
+        test("throws if count exceeds length of destination", function () {
+            var a = new Uint8Array(16);
+            var a2 = new Uint8Array(8);
+
+            assert.throws(Error, function () {
+                NativeMemoryOperations.memcpy(a2, 0, a, 0, 16);
+            });
+        });
     });
 
     fixture("moveRange", function () {
