@@ -12,19 +12,11 @@
 if (typeof (NativeMemoryOperations) === "undefined") {
     var NativeMemoryOperations = Object.create(null);
 
-    if (typeof (WeakMap) !== "undefined") {
-        NativeMemoryOperations.byteArrayCache = new WeakMap();
-    } else {
-        NativeMemoryOperations.$byteArrayCache = Object.create(null);
-        NativeMemoryOperations.byteArrayCache = {
-            get: function (key) {
-                return NativeMemoryOperations.$byteArrayCache[key];
-            },
-            set: function (key, value) {
-                NativeMemoryOperations.$byteArrayCache[key] = value;
-            }
-        };
-    }
+    // FIXME: This should probably just fallback to some other lookup mechanism, or create the Uint8Array every time.
+    if (typeof (WeakMap) === "undefined")
+        throw new Error("WeakMaps are required");
+
+    NativeMemoryOperations.byteArrayCache = new WeakMap();
 
     /*
         For the given typed array, returns a Uint8Array pointing at its underlying buffer.
@@ -41,6 +33,9 @@ if (typeof (NativeMemoryOperations) === "undefined") {
         var result = NativeMemoryOperations.byteArrayCache.get(buffer);
         if (!result)
             NativeMemoryOperations.byteArrayCache.set(buffer, result = new Uint8Array(buffer, 0, buffer.byteLength));
+
+        if (result.buffer !== buffer)
+            throw new Error("what");
 
         return result;
     };
@@ -109,7 +104,12 @@ if (typeof (NativeMemoryOperations) === "undefined") {
         if (sourceEndOffsetInElements < sourceStartOffsetInElements)
             throw new Error("End offset must be greater than or equal to start offset.");
 
-        throw new Error("Not implemented");
+        for (var sourceOffset = sourceStartOffsetInElements, destOffset = destOffsetInElements; 
+            sourceOffset < sourceEndOffsetInElements;
+            sourceOffset = (sourceOffset + 1) | 0, destOffset = (destOffset + 1) | 0) {
+
+            this[destOffset] = sourceTypedArray[sourceOffset];
+        }
     }
     
     /* 
