@@ -145,6 +145,10 @@ if (typeof (NativeMemoryOperations) === "undefined") {
     ) {
         if (endOffsetInElements < startOffsetInElements)
             throw new Error("End offset must be greater than or equal to start offset.");
+        else if (endOffsetInElements > this.length)
+            throw new Error("End offset must be less than or equal to length of array.");
+        else if (startOffsetInElements < 0)
+            throw new Error("Start offset must not be negative.");
         else if (endOffsetInElements === startOffsetInElements)
             return;
 

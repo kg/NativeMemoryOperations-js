@@ -122,5 +122,42 @@ module({
 
             assertEqualArrays(expected, a);
         });
+
+        test("throws if count is negative", function () {
+            var a = new Uint8Array(8);
+
+            assert.throws(Error, function () {
+                NativeMemoryOperations.memset(a, 0, 0, -1);
+            });
+        });
+
+        test("throws if start offset is negative", function () {
+            var a = new Uint8Array(8);
+
+            assert.throws(Error, function () {
+                NativeMemoryOperations.memset(a, -32, 0, 8);
+            });
+        });
+
+        test("throws if count exceeds size of array", function () {
+            var a = new Uint8Array(8);
+
+            assert.throws(Error, function () {
+                NativeMemoryOperations.memset(a, 0, 0, 32);
+            });
+        });
+    });
+
+    fixture("setRange", function () {
+        test("sets values", function () {
+            var a = new Float32Array(8);
+
+            var f = 0.1;
+            var expected = new Float32Array([0, f, f, f, f, f, f, 0]);
+
+            a.setRange(1, 7, f);
+
+            assertEqualArrays(expected, a);
+        });
     });
 });
