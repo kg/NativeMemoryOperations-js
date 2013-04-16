@@ -143,7 +143,19 @@ if (typeof (NativeMemoryOperations) === "undefined") {
         startOffsetInElements, endOffsetInElements,
         value
     ) {
-         throw new Error("Not implemented");
+        if (endOffsetInElements < startOffsetInElements)
+            throw new Error("End offset must be greater than or equal to start offset.");
+        else if (endOffsetInElements === startOffsetInElements)
+            return;
+
+        var typedValue = (this[startOffsetInElements] = value);
+
+        for (var offset = (startOffsetInElements + 1) | 0;
+             offset < endOffsetInElements;
+             offset = (offset + 1) | 0) {
+
+            this[offset] = typedValue;
+        }
     }
     
     /*
