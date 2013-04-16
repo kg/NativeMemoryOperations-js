@@ -1,3 +1,3 @@
 [submodule "ThirdParty/imvujs"]
 	path = ThirdParty/imvujs
-	url = git://github.com/imvu/imvujs.git
+	url = git://github.com/kevingadd/imvujs.git
