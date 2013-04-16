@@ -47,4 +47,34 @@ module({
             NativeMemoryOperations.memcpy(a, 0, a, 0, -1);
         });
     });
+
+    test("handles same-array move", function () {
+        var a = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]);
+
+        var expected = new Uint8Array([0, 1, 2, 3, 0, 1, 2, 3]);
+
+        NativeMemoryOperations.memcpy(a, 4, a, 0, 4);
+
+        assertEqualArrays(expected, a);
+    });
+
+    test("handles same-array overlapping forwards move", function () {
+        var a = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]);
+
+        var expected = new Uint8Array([0, 1, 0, 1, 2, 3, 4, 5]);
+
+        NativeMemoryOperations.memcpy(a, 2, a, 0, 6);
+
+        assertEqualArrays(expected, a);
+    });
+
+    test("handles same-array overlapping backwards move", function () {
+        var a = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]);
+
+        var expected = new Uint8Array([2, 3, 4, 5, 6, 7, 6, 7]);
+
+        NativeMemoryOperations.memcpy(a, 0, a, 2, 6);
+
+        assertEqualArrays(expected, a);
+    });
 });

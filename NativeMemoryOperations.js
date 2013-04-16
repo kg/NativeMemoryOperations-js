@@ -58,9 +58,11 @@ if (typeof (NativeMemoryOperations) === "undefined") {
         sourceOffsetInBytes = (sourceOffsetInBytes + sourceTypedArray.byteOffset) | 0;
         countInBytes = countInBytes | 0;
 
+        var endOffsetInBytes = (sourceOffsetInBytes + countInBytes) | 0;
+
         destArray.moveRange(
             destOffsetInBytes, 
-            sourceArray, sourceOffsetInBytes, countInBytes
+            sourceArray, sourceOffsetInBytes, endOffsetInBytes
         );
     };
 
@@ -104,11 +106,32 @@ if (typeof (NativeMemoryOperations) === "undefined") {
         if (sourceEndOffsetInElements < sourceStartOffsetInElements)
             throw new Error("End offset must be greater than or equal to start offset.");
 
-        for (var sourceOffset = sourceStartOffsetInElements, destOffset = destOffsetInElements; 
-            sourceOffset < sourceEndOffsetInElements;
-            sourceOffset = (sourceOffset + 1) | 0, destOffset = (destOffset + 1) | 0) {
+        var copyForwards = true;
 
-            this[destOffset] = sourceTypedArray[sourceOffset];
+        if (this === sourceTypedArray) {
+            if (destOffsetInElements === sourceStartOffsetInElements)
+                return;
+            else
+                copyForwards = (sourceStartOffsetInElements > destOffsetInElements);
+        }
+
+        if (copyForwards) {
+            for (var sourceOffset = sourceStartOffsetInElements, destOffset = destOffsetInElements; 
+                sourceOffset < sourceEndOffsetInElements;
+                sourceOffset = (sourceOffset + 1) | 0, destOffset = (destOffset + 1) | 0) {
+
+                this[destOffset] = sourceTypedArray[sourceOffset];
+            }
+        } else {
+            // This sucks. Wish it was (startOffset, count).
+            var destEndOffsetInElements = (destOffsetInElements + (sourceEndOffsetInElements - sourceStartOffsetInElements)) | 0;
+
+            for (var sourceOffset = sourceEndOffsetInElements - 1, destOffset = destEndOffsetInElements - 1; 
+                sourceOffset >= sourceStartOffsetInElements;
+                sourceOffset = (sourceOffset - 1) | 0, destOffset = (destOffset - 1) | 0) {
+
+                this[destOffset] = sourceTypedArray[sourceOffset];
+            }
         }
     }
     
