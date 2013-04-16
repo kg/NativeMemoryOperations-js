@@ -1,5 +1,5 @@
 /*
-    Native memory operations JS polyfill v1
+    Native memory operations JS polyfill v2
     by Kevin Gadd (@antumbral, kevin.gadd@gmail.com)
 
     https://github.com/kevingadd/NativeMemoryOperations-js
@@ -13,12 +13,14 @@
 if (typeof (NativeMemoryOperations) === "undefined") {
     var NativeMemoryOperations = Object.create(null);
 
-    // FIXME: This should probably just fallback to some other lookup mechanism, or create the Uint8Array every time.
-    if (typeof (WeakMap) === "undefined")
-        throw new Error("WeakMaps are required");
-
-    NativeMemoryOperations.byteArrayCache = new WeakMap();
-    NativeMemoryOperations.uint32ArrayCache = new WeakMap();
+    if (typeof (WeakMap) !== "undefined") {
+        NativeMemoryOperations.byteArrayCache = new WeakMap();
+        NativeMemoryOperations.uint32ArrayCache = new WeakMap();
+    } else {
+        // throw new Error("WeakMaps are required");
+        NativeMemoryOperations.byteArrayCache = null;
+        NativeMemoryOperations.uint32ArrayCache = null;
+    }
 
     /*
         For the given typed array, returns a Uint8Array pointing at its underlying buffer.
@@ -32,9 +34,13 @@ if (typeof (NativeMemoryOperations) === "undefined") {
         if (!buffer)
             throw new Error("typedArray must be a typed array");
 
-        var result = NativeMemoryOperations.byteArrayCache.get(buffer);
-        if (!result)
-            NativeMemoryOperations.byteArrayCache.set(buffer, result = new Uint8Array(buffer, 0, buffer.byteLength));
+        if (NativeMemoryOperations.byteArrayCache) {
+            var result = NativeMemoryOperations.byteArrayCache.get(buffer);
+            if (!result)
+                NativeMemoryOperations.byteArrayCache.set(buffer, result = new Uint8Array(buffer, 0, buffer.byteLength));
+        } else {
+            var result = new Uint8Array(buffer, 0, buffer.byteLength)
+        }
 
         return result;
     };
@@ -53,9 +59,13 @@ if (typeof (NativeMemoryOperations) === "undefined") {
         else if ((buffer.byteLength >> 2) << 2 !== buffer.byteLength)
             throw new Error("typedArray's underlying buffer must have a length that is a multiple of 4");
 
-        var result = NativeMemoryOperations.uint32ArrayCache.get(buffer);
-        if (!result)
-            NativeMemoryOperations.uint32ArrayCache.set(buffer, result = new Uint32Array(buffer, 0, buffer.byteLength >> 2));
+        if (NativeMemoryOperations.uint32ArrayCache) {
+            var result = NativeMemoryOperations.uint32ArrayCache.get(buffer);
+            if (!result)
+                NativeMemoryOperations.uint32ArrayCache.set(buffer, result = new Uint32Array(buffer, 0, buffer.byteLength >> 2));
+        } else {
+            var result = new Uint32Array(buffer, 0, buffer.byteLength >> 2);
+        }
 
         return result;
     };
