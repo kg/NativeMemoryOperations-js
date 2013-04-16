@@ -10,9 +10,21 @@
 */
 
 if (typeof (NativeMemoryOperations) === "undefined") {
-    NativeMemoryOperations = Object.create(null);
+    var NativeMemoryOperations = Object.create(null);
 
-    NativeMemoryOperations.byteArrayCache = new WeakMap();
+    if (typeof (WeakMap) !== "undefined") {
+        NativeMemoryOperations.byteArrayCache = new WeakMap();
+    } else {
+        NativeMemoryOperations.$byteArrayCache = Object.create(null);
+        NativeMemoryOperations.byteArrayCache = {
+            get: function (key) {
+                return NativeMemoryOperations.$byteArrayCache[key];
+            },
+            set: function (key, value) {
+                NativeMemoryOperations.$byteArrayCache[key] = value;
+            }
+        };
+    }
 
     /*
         For the given typed array, returns a Uint8Array pointing at its underlying buffer.
@@ -96,6 +108,8 @@ if (typeof (NativeMemoryOperations) === "undefined") {
             throw new Error("Source and destination typed arrays must be of the same type.");
         if (sourceEndOffsetInElements < sourceStartOffsetInElements)
             throw new Error("End offset must be greater than or equal to start offset.");
+
+        throw new Error("Not implemented");
     }
     
     /* 
